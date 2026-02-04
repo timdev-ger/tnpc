@@ -1,115 +1,56 @@
-# TNPC — Offline-First NPC AI Toolkit (Concept)
+# TNPC
 
-**TNPC** is a concept project for an **offline-only** AI toolkit that helps game developers add believable, testable NPC intelligence to games **quickly**—with a future goal of supporting **both Unity and Unreal Engine**.
+TNPC is an offline-only, engine-agnostic C++20 core library that represents a compact, deterministic AI runtime for NPC decision-making. It provides a behavior-tree based brain with blackboard/memory, perception stubs, intent queues, and deterministic debug tracing. The goal is to serve as the core logic layer that can be embedded into Unity/Unreal adapters without runtime networking or external dependencies.
 
-> This repository is intentionally **empty of code** right now.  
-> It exists to present the idea, scope, and long-term direction.
+## Features
 
----
+- Deterministic tick pipeline with seedable RNG
+- Blackboard (variant key/value) + short-term memory with TTL
+- Minimal, robust behavior tree (selector/sequence/condition/action)
+- Perception interface with a default stub
+- Intent queue with stable priority ordering
+- Debug trace capture with human-readable export
+- JSON export for `DebugTrace`
+- CLI demo simulation + unit tests (offline, header-only test harness)
 
-## Vision
+## Build (Windows MSVC)
 
-Build an AI runtime that lets developers plug in “real NPC brains” without building a full AI stack from scratch:
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release
+```
 
-- **Deterministic decision-making** (reproducible gameplay + debuggable behavior)
-- **Engine-agnostic core** with thin adapters for Unity and Unreal
-- **Offline-first by design** (no cloud dependency)
-- **Modular features**: movement intents, survival needs, combat behaviors, dialogue (optional), and tooling
+## Build (Linux/macOS)
 
----
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
+```
 
-## Why Offline-Only?
+## Run the demo
 
-Many games need:
-- predictable performance and costs (no per-request fees),
-- reliable behavior in offline mode,
-- console-friendly deployment,
-- full control over content, safety, and data.
+The demo is a deterministic sandbox that showcases how multiple NPCs tick through a small hunger/threat scenario. It is intended to validate reproducibility, intent emission, and debug tracing without any game engine.
 
-TNPC is designed around those constraints from day one.
+```bash
+./sim_demo --seed 42 --ticks 30 --agents 2 --verbose
+```
 
----
+On Windows (multi-config builds), the executable is located at `build/Release/sim_demo.exe`.
 
-## Core Idea (Planned Architecture)
+## Adapter path (Unity / Unreal)
 
-### 1) C++ Core Runtime (engine-agnostic)
-A portable C++ library that provides:
-- **NPC Brain**
-  - Behavior Trees and/or Utility AI / GOAP (selectable)
-  - Needs-based decision systems (hunger, thirst, fatigue, temperature, fear, etc.)
-  - Perception and threat evaluation (vision/hearing abstractions)
-- **Memory & Knowledge**
-  - Blackboard/state variables
-  - Short-term / long-term memory (facts with TTL and persistence options)
-- **Intent/Action Output**
-  - NPCs output **intents** like `MoveTo`, `TakeCover`, `Interact`, `Attack`, `Speak`
-  - The game/engine executes them (TNPC doesn’t replace the engine movement/animation system)
+The `airuntime` namespace is intentionally engine-agnostic. A Unity/Unreal adapter would typically:
 
-### 2) Engine Adapters
-- **Unity Adapter (C#)**  
-  Wraps the core runtime, provides editor tooling and components.
-- **Unreal Adapter (C++ / Blueprints)**  
-  Exposes the runtime to gameplay code and Blueprints.
+- Map engine perception data into `PerceptionInput`
+- Translate `Intent` entries into engine-specific actions (movement, cover, animation, etc.)
+- Forward engine timing to `Context::delta_seconds` and `Context::time_seconds`
+- Stream `DebugTrace` output into engine visualizers or telemetry
 
-### 3) Debugging & Tooling (must-have)
-- Decision traces (“why did NPC do that?”)
-- Reproducible ticks (seeded RNG, replayable simulations)
-- Visual debugging (blackboard inspector, behavior tree trace)
-- Data-driven authoring (NPC profiles, needs curves, behavior definitions)
+Adapter stubs live in `include/airuntime/adapters/adapter_interfaces.h` and provide placeholder
+interfaces for perception, intent execution, and engine tick hooks.
 
----
+## Offline-only guarantee
 
-## Planned Features (High Level)
-
-### Movement & Survival Behaviors
-- Patrol, roam, investigate, flee, seek shelter, gather resources
-- Dynamic needs: hunger, thirst, warmth, stamina, morale
-- Threat-based responses: cover seeking, alerting allies, retreat logic
-
-### Dialogue (Optional / Offline)
-Two potential modes:
-1. **Safe template + retrieval** (controlled, deterministic)
-2. **Local LLM integration** (optional addon, offline inference, strict tool/action boundaries)
-
-### Voice (Optional / Offline)
-Offline STT/TTS as optional integrations (LOD-based so it doesn’t melt CPUs).
-
----
-
-## What TNPC Is *Not*
-- A full replacement for Unity/Unreal navigation or animation systems
-- “One model that magically solves everything”
-- A cloud service
-
-TNPC is envisioned as a **game AI runtime** that is controllable, testable, and shippable offline.
-
----
-
-## Target Use Cases
-- RPGs with believable villagers, companions, and enemies
-- Survival games with needs-driven NPCs and emergent behaviors
-- Sandbox worlds where NPCs react to changing conditions
-
----
-
-## Roadmap (Concept)
-- **Phase 1:** C++ core runtime (deterministic tick + intents + behavior system)
-- **Phase 2:** Unity adapter (components + debug overlay + example scene)
-- **Phase 3:** Unreal adapter (plugin + Blueprint nodes + example level)
-- **Phase 4:** Authoring tools + data-driven NPC profiles
-- **Phase 5:** Optional offline dialogue/voice addons
-
----
-
-## Contributing / Feedback
-This repo currently serves as an idea and specification space.
-If you’re interested in the concept, feel free to open an issue with:
-- desired feature set,
-- engine constraints (Unity/Unreal versions),
-- platform targets (PC/console),
-- offline requirements (CPU-only vs GPU allowed).
-
----
-
-## License
-Planned: MIT (subject to change once implementation begins).
+The library and demo perform no network calls and require no downloads during builds. All dependencies are vendored in-repo and header-only.
